@@ -1,6 +1,6 @@
 #RFID TAG ID's
-left = ""
-right = ""
+left = "E280F302000000008927897C"
+right = "E280F3020000000089278990"
 
 print("STARTING...")
 
