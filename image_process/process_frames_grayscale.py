@@ -27,6 +27,7 @@ def region_selection(image):
 	# we have created this polygon in accordance to how the camera was placed
 	rows, cols = image.shape[:2]
 
+	#top left origin
 	bottom_left  = [cols * 0, rows * 0.95]#[cols * 0.1, rows * 0.95]
 	top_left	 = [cols * 0.4, rows * 0.6]
 	bottom_right = [cols * 1, rows * 0.95]#[cols * 0.9, rows * 0.95]
@@ -141,6 +142,40 @@ def debug(image):
 	image = cv2.resize(image, (960, 540))
 	cv2.imshow("image",image)
 
+def add_axes(image, tick_interval=100):
+    """
+    Add external X and Y axes with labeled ticks outside the image.
+    """
+    h, w = image.shape[:2]
+    # Create a new blank canvas (extra space for axes)
+    padding_left = 100  # Space for Y-axis
+    padding_bottom = 50  # Space for X-axis
+    new_w = w + padding_left
+    new_h = h + padding_bottom
+    canvas = np.ones((new_h, new_w, 3), dtype=np.uint8) * 255  # White background
+    canvas[0:h, padding_left:new_w] = image  # Place original image
+    # Define colors
+    axis_color = (0, 0, 0)  # Black color for axes
+    # Draw X-axis
+    x_axis_start = (padding_left, h)  # Start at bottom-left
+    x_axis_end = (new_w, h)  # Extend to the right
+    cv2.line(canvas, x_axis_start, x_axis_end, axis_color, 2)
+    # Draw Y-axis
+    y_axis_start = (padding_left, 0)  # Start at top
+    y_axis_end = (padding_left, h)  # Extend down
+    cv2.line(canvas, y_axis_start, y_axis_end, axis_color, 2)
+    # Add X-axis ticks
+    for x in range(0, w + 1, tick_interval):
+        cv2.line(canvas, (x + padding_left, h), (x + padding_left, h + 10), axis_color, 2)
+        cv2.putText(canvas, str(x), (x + padding_left - 10, h + 30),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, axis_color, 2)
+    # Add Y-axis ticks
+    for y in range(0, h + 1, tick_interval):
+        cv2.line(canvas, (padding_left, y), (padding_left - 10, y), axis_color, 2)
+        cv2.putText(canvas, str(h - y), (10, y + 5),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, axis_color, 2)
+    return canvas
+
 def frame_processor(image):
 	"""
 	Process the input frame to detect lane lines.
@@ -167,7 +202,27 @@ def frame_processor(image):
 	region = region_selection(edges)
 
 	hough = hough_transform(region)
-	result = draw_lane_lines(image, lane_lines(image, hough))
+	left_line, right_line = lane_lines(image, hough)
+	result_overlay = draw_lane_lines(image, (left_line,right_line))
+	result = add_axes(result_overlay)
+
+
+	#Taking care of None Type
+	if not (left_line is None or right_line is None):
+		left_line_pixel = left_line[0][0]
+		right_line_pixel = right_line[0][0]
+
+		car_center_pixel = (image.shape[1])/2
+		desired_pixel = (left_line_pixel+right_line_pixel)/2
+		off_center_pixel = abs(car_center_pixel-desired_pixel)
+
+		pixel_per_distance = desired_pixel/(45+2) #full lane + half of green tape
+		off_center_distance = off_center_pixel/pixel_per_distance
+
+		#Printing left & right lane pixels
+		print("Left Lane Pixel: %d\t| Right Lane Pixel: %d\t| Offcenter Pixels: %d\t| Offcenter Distance: %d"
+			%(left_line_pixel,right_line_pixel,off_center_pixel,off_center_distance))
+
 	return result
 
 # driver function
@@ -180,7 +235,7 @@ def process_video(test_video, output_video):
 	"""
 	input_video = editor.VideoFileClip(test_video, audio=False)
 	processed = input_video.fl_image(frame_processor)
-	processed.write_videofile(output_video, audio=False)
+	processed.write_videofile(output_video, audio=False, verbose=False, logger=None)
 	
 
 process_video('left_zed.mp4','output_left_full.mp4')
