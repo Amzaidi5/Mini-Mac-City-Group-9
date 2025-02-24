@@ -84,14 +84,14 @@ class LanePIDControl:
         
         # PID control for lateral position
         steer_correction, self.prev_error_x, self.integral_x = self.pid_controller(
-            0, x_error, self.kp_x, self.ki_x, self.kd_x, self.integral_x, self.prev_error_x, dt) # we can play around with these values
+            0, x_error, self.kp_x, self.ki_x, self.kd_x, self.integral_x, self.prev_error_x, dt) # we can play around with these values. Change setpoint value as necessary
         
         # PID control for orientation
         orientation_correction, self.prev_error_phi, self.integral_phi = self.pid_controller(
-            0, phi_error, self.kp_phi, self.ki_phi, self.kd_phi, self.integral_phi, self.prev_error_phi, dt) # we can play around with these values
+            0, phi_error, self.kp_phi, self.ki_phi, self.kd_phi, self.integral_phi, self.prev_error_phi, dt) # we can play around with these values.Change setpoint value as necessary
         
-        steering_angle = - (steer_correction + orientation_correction)
-        speed = 1.5  # Fixed speed for now
+        steering_angle = - (steer_correction + orientation_correction) # I am trying something crazy here lets see
+        speed = 1.5  # Fixed speed for now we can change this if necessary
         
         self.send_drive_command(speed, steering_angle)
 
@@ -106,7 +106,7 @@ class LanePIDControl:
             self.compute_control()
             self.rate.sleep()
 
-if __name__ == '__main__':
+if __name__ == '__main__': #standard based on earlier code
     try:
         controller = LanePIDControl()
         controller.run()
