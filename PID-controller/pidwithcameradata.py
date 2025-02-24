@@ -18,12 +18,12 @@ class LanePIDControl:
         self.to_vesc = rospy.Publisher('/ackermann_cmd_mux/input/navigation', AckermannDriveStamped, queue_size=10)
 
         # Error variables
-        self.x_error_left = None
+        self.x_error_left = None # assuming this is the data stream we will be getting, change values if necessasry
         self.phi_error_left = None
         self.x_error_right = None
         self.phi_error_right = None
 
-        # PID parameters
+        # PID parameters change these values as needed
         self.kp_x = 0.45
         self.ki_x = 0.0075
         self.kd_x = 0.001
@@ -65,7 +65,7 @@ class LanePIDControl:
 
         # Handle missing data by averaging available values
         if self.x_error_left is not None and self.x_error_right is not None:
-            x_error = (self.x_error_left + self.x_error_right) / 2
+            x_error = (self.x_error_left + self.x_error_right) / 2    # for now but we can make changes depending on what ALI says
         elif self.x_error_left is not None:
             x_error = self.x_error_left
         elif self.x_error_right is not None:
@@ -84,11 +84,11 @@ class LanePIDControl:
         
         # PID control for lateral position
         steer_correction, self.prev_error_x, self.integral_x = self.pid_controller(
-            0, x_error, self.kp_x, self.ki_x, self.kd_x, self.integral_x, self.prev_error_x, dt)
+            0, x_error, self.kp_x, self.ki_x, self.kd_x, self.integral_x, self.prev_error_x, dt) # we can play around with these values
         
         # PID control for orientation
         orientation_correction, self.prev_error_phi, self.integral_phi = self.pid_controller(
-            0, phi_error, self.kp_phi, self.ki_phi, self.kd_phi, self.integral_phi, self.prev_error_phi, dt)
+            0, phi_error, self.kp_phi, self.ki_phi, self.kd_phi, self.integral_phi, self.prev_error_phi, dt) # we can play around with these values
         
         steering_angle = - (steer_correction + orientation_correction)
         speed = 1.5  # Fixed speed for now
