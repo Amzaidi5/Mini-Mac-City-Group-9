@@ -16,28 +16,29 @@ class LaneControl:
         rospy.init_node('lane_control', anonymous=True)
         
         # Subscribers for tag distances
-        self.offcentre_distance_sub = rospy.Subscriber('/lane_following/offcentre_distance', Float64, self.offcentre_callback) # we need to set this data stream up essentially
-        self.orientation_angle_sub = rospy.Subscriber('/lane_following/orientation', Float64, self.orientation_angle_callback) # we need to set this data stream up essentially
+        self.offcentre_distance_sub = rospy.Subscriber('/lane_following/offcentre_distance', Float64, self.offcentre_callback)
+        self.orientation_angle_sub = rospy.Subscriber('/lane_following/orientation', Float64, self.orientation_angle_callback)
         
         # Publisher for vehicle commands
         self.to_vesc = rospy.Publisher('/ackermann_cmd_mux/input/navigation', AckermannDriveStamped, queue_size=10)
         
         # Error values
-        self.offcentre_distance = None # I think you guys have the math to test this out if I am not wrong.
-        self.orientation = None
-        
+        self.offcentre_distance = None
+        self.orientation_angle = None
         
         # PID parameters
-        self.kp_steer, self.ki_steer, self.kd_steer = 3, 0.1, 0.05 # we need to test to figure out these values, dummy values for now
-        #self.kp_speed, self.ki_speed, self.kd_speed = 3, 0.1, 0.05 # we need to test to figure out these values, dummy values for now
+        self.kp_offcentre, self.ki_offcentre, self.kd_offcentre = 1.5, 0.1, 0.05  # PID for off-center correction
+        self.kp_orient, self.ki_orient, self.kd_orient = 2, 0.05, 0.03  # PID for orientation correction
         
         # PID states
-        self.previous_error_steer = 0
-        self.integral_steer = 0
+        self.previous_error_offcentre = 0
+        self.integral_offcentre = 0
+        self.previous_error_orient = 0
+        self.integral_orient = 0
         
         self.dt = 0.05
-        self.rate = rospy.Rate(1 / self.dt) # we need to set this up essentially depending on how often uwb sends data to make it less error prone
-        
+        self.rate = rospy.Rate(1 / self.dt)
+    
     def offcentre_callback(self, msg): 
         self.offcentre_distance = msg.data
     
@@ -46,29 +47,41 @@ class LaneControl:
     
     def compute_control(self):
         while not rospy.is_shutdown():
-            if self.offcentre_distance is None:
+            if self.offcentre_distance is None or self.orientation_angle is None:
                 continue
             
-            if (self.offcentre_distance<5 and self.offcentre_distance>5)  and self.orientation_angle==0:
-                print("centred")
-            
-            # Compute steering control
-            steering_angle, self.previous_error_steer, self.integral_steer = pid_controller( #figure out exact values later for setpoint
+            # PID for off-center correction: generates a desired orientation angle
+            desired_orientation, self.previous_error_offcentre, self.integral_offcentre = pid_controller(
                 setpoint=0,
                 pv=self.offcentre_distance,
-                kp=self.kp_steer,
-                ki=self.ki_steer,
-                kd=self.kd_steer,
-                previous_error=self.previous_error_steer,
-                integral=self.integral_steer,
+                kp=self.kp_offcentre,
+                ki=self.ki_offcentre,
+                kd=self.kd_offcentre,
+                previous_error=self.previous_error_offcentre,
+                integral=self.integral_offcentre,
                 dt=self.dt
             )
             
-            # Compute speed control based on distance from tag
+            # PID for orientation correction: aligns with the desired orientation
+            orientation_correction, self.previous_error_orient, self.integral_orient = pid_controller(
+                setpoint=desired_orientation,  # Now tracking the desired orientation, not just zero
+                pv=self.orientation_angle,
+                kp=self.kp_orient,
+                ki=self.ki_orient,
+                kd=self.kd_orient,
+                previous_error=self.previous_error_orient,
+                integral=self.integral_orient,
+                dt=self.dt
+            )
             
-            speed=10 #dummy value for now
-            self.drive(speed, -steering_angle) #negative steering angle essentially flips how the car needs to move!! if theres an error just make the change beforehand before sending the value to the vesc.
-            self.rate.sleep() # might be a buffer I am not sure.
+            # Steering is now only correcting orientation based on the desired angle
+            steering_angle = orientation_correction
+            
+            # Set a constant speed for now
+            speed = 10  # Adjust as necessary
+            
+            self.drive(speed, -steering_angle)  # Negative to correct steering direction
+            self.rate.sleep()
     
     def drive(self, speed, angle):
         msg = AckermannDriveStamped()
