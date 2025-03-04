@@ -79,16 +79,7 @@ class LaneControl:
             )
             
             # Compute speed control based on distance from tag
-            speed, self.previous_error_speed, self.integral_speed = pid_controller(  #
-                setpoint=1,
-                pv=distance_to_use,
-                kp=self.kp_speed,
-                ki=self.ki_speed,
-                kd=self.kd_speed,
-                previous_error=self.previous_error_speed,
-                integral=self.integral_speed,
-                dt=self.dt
-            )
+            
             
             self.drive(speed, -steering_angle) #negative steering angle essentially flips how the car needs to move!! if theres an error just make the change beforehand before sending the value to the vesc.
             self.rate.sleep() # might be a buffer I am not sure.
