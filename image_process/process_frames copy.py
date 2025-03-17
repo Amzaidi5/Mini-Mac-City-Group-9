@@ -1,5 +1,7 @@
+#!/usr/bin/env python
+
 import numpy as np
-import pandas as pd
+#import pandas as pd
 import cv2
 
 import rospy
@@ -16,6 +18,7 @@ class images:
         #self.right_sub = rospy.Subscriber("/zed2/zed_node/right/image_rect_color", Image, self.right_image_processing)
         
         self.x_error_pub = rospy.Publisher('x_error', Float64, queue_size=3)
+	self.bridge = CvBridge()
 
     def region_selection(self, image):
         """
@@ -133,16 +136,16 @@ class images:
         right_line = self.pixel_points(y1, y2, right_lane)
         return left_line, right_line
 
-        
+    """
     def draw_lane_lines(self, image, lines, color=[255, 0, 0], thickness=12):
-        """
+        
         Draw lines onto the input image.
             Parameters:
                 image: The input test image (video frame in our case).
                 lines: The output lines from Hough Transform.
                 color (Default = red): Line color.
                 thickness (Default = 12): Line thickness. 
-        """
+        
         line_image = np.zeros_like(image)
         for line in lines:
             if line is not None:
@@ -152,16 +155,17 @@ class images:
     def debug(image):
         image = cv2.resize(image, (960, 540))
         cv2.imshow("image",image)
+    """
 
-
-    def frame_processor(self, image):
+    def frame_processor(self, msg):
         """
         Process the input frame to detect lane lines.
         Parameters:
             image: image of a road where one wants to detect lane lines
             (we will be passing frames of video to this function)
         """
-        grayscale = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+	image = self.bridge.imgmsg_to_cv2(msg, "bgr8")        
+	grayscale = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
         # hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
         # # Define the range of green color in HSV
