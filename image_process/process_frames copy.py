@@ -5,6 +5,7 @@ import numpy as np
 import cv2
 
 import rospy
+import tf
 from scipy.cluster.hierarchy import dendrogram, linkage, fcluster
 from cv_bridge import CvBridge, CvBridgeError
 from sensor_msgs.msg import Image
@@ -83,8 +84,10 @@ class images:
 
         return (avg_left_m, avg_left_b, left_lane_pixel), (avg_right_m, avg_right_b, right_lane_pixel)
 
+    def frame_processor(self, msg):
 
-    def frame_processor(self, image):
+	image = self.bridge.imgmsg_to_cv2(msg, "bgr8")	
+	
         if image is None:
             print("Error: Could not load image.")
             return
@@ -99,14 +102,12 @@ class images:
         (right_m, right_b, right_lane_pixel), (left_m, left_b, left_lane_pixel) = self.classify_and_average_lines(lines, image_height)
 
         if left_m is not None:
-            print(f"Left Lane Equation (Bottom-Left Origin): y = {left_m:.2f}x + {left_b:.2f}")
-            print(f"Left Lane X-Intercept: x = {left_lane_pixel:.2f} pixels")
+	    print("Left x intercept: %f" %left_lane_pixel)
         else:
             print("No left lane detected.")
 
         if right_m is not None:
-            print(f"Right Lane Equation (Bottom-Left Origin): y = {right_m:.2f}x + {right_b:.2f}")
-            print(f"Right Lane X-Intercept: x = {right_lane_pixel:.2f} pixels")
+	    print("Right x intercept: %f" %right_lane_pixel)
         else:
             print("No right lane detected.")
 
@@ -124,7 +125,13 @@ class images:
             %(left_lane_pixel,right_lane_pixel,off_center_pixel,off_center_distance))
 
             self.x_error_pub.publish(off_center_distance)
-            return off_center_distance
+
+
+       	return off_center_distance
+
+
+
+
 
 def main(args=None):
     rospy.init_node('lane_detection', anonymous=True)
