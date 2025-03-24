@@ -21,7 +21,7 @@ class LaneControl:
         rospy.init_node('lane_control_left_only', anonymous=True)
         
         # Subscriber for off-center distance from left camera
-        self.offcentre_distance_sub = rospy.Subscriber('/lane_following/x_error_left', Float64, self.offcentre_callback)
+        self.offcentre_distance_sub = rospy.Subscriber('/x_error', Float64, self.offcentre_callback)
         
         # Publisher for vehicle commands
         self.to_vesc = rospy.Publisher('/ackermann_cmd_mux/input/navigation', AckermannDriveStamped, queue_size=10)
@@ -50,7 +50,9 @@ class LaneControl:
     
     def compute_control(self):
         while not rospy.is_shutdown():
-            # Compute PID control based on off-center distance
+            # Compute PID control based on off-center distance 
+            if self.offcentre_distance <=5 and self.offcentre_distance>=-5:
+                self.offcentre_distance =0
             raw_steering_angle, self.previous_error, self.integral = pid_controller(
                 setpoint=0,  # Target is to be centered
                 pv=self.offcentre_distance,
@@ -61,6 +63,7 @@ class LaneControl:
                 integral=self.integral,
                 dt=self.dt
             )
+            print("off center distance =  ",str(self.offcentre_distance))
 
             # Apply derivative smoothing
             alpha = 0.8  # Smoothing factor
