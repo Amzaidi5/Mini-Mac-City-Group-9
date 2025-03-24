@@ -10,6 +10,10 @@ def pid_controller(setpoint, pv, kp, ki, kd, previous_error, integral, dt):
     integral += error * dt
     derivative = (error - previous_error) / dt
     control = (kp * error + ki * integral + kd * derivative)
+    
+    # Debugging output
+    print("PID Output: control=%.4f, error=%.4f, integral=%.4f, derivative=%.4f" % (control, error, integral, derivative))
+    
     return control, error, integral
 
 class LaneControl:
@@ -25,8 +29,8 @@ class LaneControl:
         # Initialize error values
         self.offcentre_distance = 0.0
         
-        # PID parameters for off-center correction (tuned for smoother control)
-        self.kp, self.ki, self.kd = 1.2, 0.05, 0.08  # Adjusted values
+        # PID parameters for off-center correction (adjusted for smoother steering)
+        self.kp, self.ki, self.kd = 1.2, 0.05, 0.08  
 
         # PID states
         self.previous_error = 0
@@ -73,11 +77,15 @@ class LaneControl:
                                                           -max_steering_rate)
             self.previous_steering = steering_angle
 
+            # Debugging output
+            print("Steering Output: raw=%.4f, limited=%.4f" % (raw_steering_angle, steering_angle))
+
             # Set a constant speed
             speed = 1.5  # Adjust as necessary
             
             self.drive(speed, -steering_angle)  # Negative to correct steering direction
-            
+            print("Final Steering Command: %.4f" % (-steering_angle))
+
             rospy.sleep(0.01)  # Allow time for ROS to process other callbacks
             self.rate.sleep()
     
