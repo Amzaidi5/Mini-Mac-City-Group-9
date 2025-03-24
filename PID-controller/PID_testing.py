@@ -40,7 +40,7 @@ class LaneControl:
     def compute_control(self):
         while not rospy.is_shutdown():
             if abs(self.offcentre_distance) <= 5:
-                self.offcentre_distance *= 0.2  # Soft transition instead of abrupt zeroing
+                self.offcentre_distance = 0  # Set to zero within deadband
             
             raw_steering_angle, self.previous_error, self.integral = pid_controller(
                 setpoint=0, 
@@ -58,7 +58,7 @@ class LaneControl:
             derivative = alpha * (raw_steering_angle - self.previous_derivative) / self.dt + (1 - alpha) * self.previous_derivative
             self.previous_derivative = derivative
             
-            max_steering_angle = 0.3
+            max_steering_angle = min(0.05 * abs(self.offcentre_distance), 0.35)  # Dynamic scaling up to 0.35
             steering_angle = max(min(raw_steering_angle, max_steering_angle), -max_steering_angle)
             
             max_steering_rate = 0.08  # Adjusted for slightly faster response
